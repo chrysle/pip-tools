@@ -730,7 +730,7 @@ def _invert_negative_bool_options_in_config(
 
     for key, value in config.items():
         # Transform config key to its equivalent in the CLI
-        long_option = _normalize_long_option(key)
+        long_option = _convert_to_long_option(key)
         new_key = cli_opts[long_option].name if long_option in cli_opts else key
         assert new_key is not None
 
@@ -752,7 +752,7 @@ def _normalize_config_key(key: str) -> str:
     return key.lstrip("-").replace("-", "_").lower()
 
 
-def _normalize_long_option(key: str) -> str:
+def _convert_to_long_option(key: str) -> str:
     """Transform given ``some-key`` into ``--some-key``."""
     return "--" + key.lstrip("-").replace("_", "-").lower()
 
