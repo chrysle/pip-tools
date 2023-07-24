@@ -702,10 +702,10 @@ def parse_config_file(
     # In a TOML file, we expect the config to be under `[tool.pip-tools]`
     piptools_config: dict[str, Any] = config.get("tool", {}).get("pip-tools", {})
 
-    # Replace boolean flags like ``--no-annotate`` with their equivalents
-    config = _invert_negative_bool_options(
+    config = _normalize_keys_in_config(piptools_config)
+    config = _invert_negative_bool_options_in_config(
         ctx=click_context,
-        config=piptools_config,
+        config=config,
     )
 
     # Any option with multiple values needs to be a list in the pyproject.toml
@@ -718,29 +718,43 @@ def parse_config_file(
     return config
 
 
-def _invert_negative_bool_options(
+def _normalize_keys_in_config(config: dict[str, Any]) -> dict[str, Any]:
+    return {_normalize_config_key(key): value for key, value in config.items()}
+
+
+def _invert_negative_bool_options_in_config(
     ctx: click.Context, config: dict[str, Any]
 ) -> dict[str, Any]:
     new_config = {}
     cli_opts = get_cli_options(ctx)
+
     for key, value in config.items():
-        long_option = "--" + key
-        option_name = cli_opts[long_option].name
-        assert option_name is not None
-        new_key = option_name if long_option in cli_opts else _normalize_config_key(key)
+        # Transform config key to its equivalent in the CLI
+        long_option = _normalize_long_option(key)
+        new_key = cli_opts[long_option].name if long_option in cli_opts else key
+        assert new_key is not None
+
+        # Invert negative boolean according to the CLI
         new_value = (
             not value
-            if key.startswith("no-")
+            if long_option.startswith("--no-")
             and long_option not in ONLY_NEGATIVE_OPTIONS
             and isinstance(value, bool)
             else value
         )
         new_config[new_key] = new_value
+
     return new_config
 
 
 def _normalize_config_key(key: str) -> str:
+    """Transform given ``some-key`` into ``some_key``."""
     return key.lstrip("-").replace("-", "_").lower()
+
+
+def _normalize_long_option(key: str) -> str:
+    """Transform given ``some-key`` into ``--some-key``."""
+    return "--" + key.lstrip("-").replace("_", "-").lower()
 
 
 def is_path_relative_to(path1: Path, path2: Path) -> bool:
