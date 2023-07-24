@@ -702,20 +702,20 @@ def parse_config_file(
     # In a TOML file, we expect the config to be under `[tool.pip-tools]`
     piptools_config: dict[str, Any] = config.get("tool", {}).get("pip-tools", {})
 
-    config = _normalize_keys_in_config(piptools_config)
-    config = _invert_negative_bool_options_in_config(
+    piptools_config = _normalize_keys_in_config(piptools_config)
+    piptools_config = _invert_negative_bool_options_in_config(
         ctx=click_context,
-        config=config,
+        config=piptools_config,
     )
 
     # Any option with multiple values needs to be a list in the pyproject.toml
     for mv_option in MULTIPLE_VALUE_OPTIONS:
-        if not isinstance(config.get(mv_option), (list, type(None))):
+        if not isinstance(piptools_config.get(mv_option), (list, type(None))):
             original_option = mv_option.replace("_", "-")
             raise click.BadOptionUsage(
                 original_option, f"Config key '{original_option}' must be a list"
             )
-    return config
+    return piptools_config
 
 
 def _normalize_keys_in_config(config: dict[str, Any]) -> dict[str, Any]:
